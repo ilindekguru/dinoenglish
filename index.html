@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dino English Tug of War</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Mencegah seleksi teks dan touch behavior default pada mobile */
+        body {
+            overscroll-behavior: none;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 1s ease-out forwards;
+        }
+        @keyframes zoomIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .animate-zoom-in {
+            animation: zoomIn 1.5s ease-out forwards;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        /* Text Stroke Effect */
+        .stroke-text {
+            -webkit-text-stroke: 2px black;
+            paint-order: stroke fill;
+        }
+    </style>
+</head>
+<body class="bg-sky-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- ICON COMPONENTS ---
+        const Trophy = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+        );
+        const Play = ({ size = 24, className = "", fill="none" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        );
+        const RotateCcw = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        );
+        const Home = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        );
+        const Grid = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+        );
+        const Maximize = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        );
+        const Minimize = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+        );
+        const AlertCircle = ({ size = 24, className = "" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+        );
+
+        // --- BANK SOAL ---
+        const questionBank = {
+          "Numbers 1-20": [
+            { question: "Number '1'", options: ["One", "Two", "Three", "Four"], correct: "One" },
+            { question: "Number '5'", options: ["Four", "Five", "Six", "Seven"], correct: "Five" },
+            { question: "Number '10'", options: ["Ten", "Nine", "Eight", "Eleven"], correct: "Ten" },
+            { question: "Number '12'", options: ["Twelve", "Twenty", "Two", "Eleven"], correct: "Twelve" },
+            { question: "Number '20'", options: ["Twelve", "Twenty", "Two", "Ten"], correct: "Twenty" },
+            { question: "Number '8'", options: ["Seven", "Eight", "Nine", "Ten"], correct: "Eight" },
+            { question: "Number '3'", options: ["Tree", "Three", "Third", "Thirty"], correct: "Three" },
+            { question: "Number '15'", options: ["Fifty", "Fifteen", "Five", "Five Teen"], correct: "Fifteen" },
+          ],
+          "Fruits 🍎": [
+            { question: "'Apel' in English", options: ["Apple", "Grape", "Orange", "Banana"], correct: "Apple" },
+            { question: "'Pisang' in English", options: ["Pear", "Banana", "Melon", "Lemon"], correct: "Banana" },
+            { question: "'Jeruk' in English", options: ["Apple", "Orange", "Grape", "Mango"], correct: "Orange" },
+            { question: "'Anggur' in English", options: ["Grape", "Guava", "Apple", "Berry"], correct: "Grape" },
+            { question: "'Semangka' in English", options: ["Melon", "Watermelon", "Lemon", "Apple"], correct: "Watermelon" },
+            { question: "'Nanas' in English", options: ["Apple", "Pineapple", "Banana", "Papaya"], correct: "Pineapple" },
+            { question: "'Mangga' in English", options: ["Mango", "Melon", "Mangosteen", "Berry"], correct: "Mango" },
+            { question: "'Stroberi' in English", options: ["Cherry", "Strawberry", "Berry", "Grape"], correct: "Strawberry" },
+          ],
+          "Vehicles 🚗": [
+            { question: "'Mobil' in English", options: ["Bus", "Car", "Bike", "Train"], correct: "Car" },
+            { question: "'Bus' in English", options: ["Car", "Truck", "Bus", "Van"], correct: "Bus" },
+            { question: "'Pesawat' in English", options: ["Ship", "Train", "Plane", "Car"], correct: "Plane" },
+            { question: "'Kereta' in English", options: ["Train", "Truck", "Taxi", "Boat"], correct: "Train" },
+            { question: "'Sepeda' in English", options: ["Car", "Bike", "Bus", "Ship"], correct: "Bike" },
+            { question: "'Kapal' in English", options: ["Plane", "Ship", "Train", "Car"], correct: "Ship" },
+            { question: "'Truk' in English", options: ["Bus", "Van", "Truck", "Car"], correct: "Truck" },
+            { question: "'Motor' in English", options: ["Bike", "Motorcycle", "Car", "Bus"], correct: "Motorcycle" },
+          ],
+          "Body Parts 👂": [
+            { question: "'Kepala' in English", options: ["Hand", "Head", "Hair", "Face"], correct: "Head" },
+            { question: "'Mata' in English", options: ["Ear", "Nose", "Eye", "Mouth"], correct: "Eye" },
+            { question: "'Hidung' in English", options: ["Nose", "Mouth", "Cheek", "Chin"], correct: "Nose" },
+            { question: "'Telinga' in English", options: ["Eye", "Ear", "Hair", "Head"], correct: "Ear" },
+            { question: "'Tangan' in English", options: ["Foot", "Leg", "Hand", "Arm"], correct: "Hand" },
+            { question: "'Kaki' in English", options: ["Hand", "Finger", "Foot", "Arm"], correct: "Foot" },
+            { question: "'Mulut' in English", options: ["Nose", "Eye", "Mouth", "Face"], correct: "Mouth" },
+            { question: "'Rambut' in English", options: ["Head", "Hair", "Hand", "Hat"], correct: "Hair" },
+          ],
+          "Food & Drink 🍔": [
+            { question: "'Nasi' in English", options: ["Bread", "Rice", "Noodle", "Cake"], correct: "Rice" },
+            { question: "'Roti' in English", options: ["Rice", "Bread", "Meat", "Egg"], correct: "Bread" },
+            { question: "'Susu' in English", options: ["Water", "Tea", "Coffee", "Milk"], correct: "Milk" },
+            { question: "'Air' in English", options: ["Water", "Juice", "Milk", "Tea"], correct: "Water" },
+            { question: "'Telur' in English", options: ["Meat", "Fish", "Egg", "Chicken"], correct: "Egg" },
+            { question: "'Ayam' in English", options: ["Fish", "Beef", "Chicken", "Pork"], correct: "Chicken" },
+            { question: "'Ikan' in English", options: ["Fish", "Meat", "Chicken", "Egg"], correct: "Fish" },
+            { question: "'Mie' in English", options: ["Rice", "Pasta", "Noodle", "Bread"], correct: "Noodle" },
+          ],
+          "Sports ⚽": [
+            { question: "'Sepak Bola'", options: ["Football", "Basketball", "Tennis", "Golf"], correct: "Football" },
+            { question: "'Bola Basket'", options: ["Volleyball", "Basketball", "Baseball", "Rugby"], correct: "Basketball" },
+            { question: "'Renang'", options: ["Running", "Swimming", "Diving", "Surfing"], correct: "Swimming" },
+            { question: "'Bulu Tangkis'", options: ["Tennis", "Badminton", "Ping Pong", "Squash"], correct: "Badminton" },
+            { question: "'Lari'", options: ["Walking", "Jumping", "Running", "Hiking"], correct: "Running" },
+            { question: "'Bola Voli'", options: ["Volleyball", "Football", "Tennis", "Basket"], correct: "Volleyball" },
+            { question: "'Tinju'", options: ["Boxing", "Wrestling", "Karate", "Judo"], correct: "Boxing" },
+            { question: "'Tenis'", options: ["Table Tennis", "Badminton", "Tennis", "Golf"], correct: "Tennis" },
+          ],
+          "Colours 🎨": [
+            { question: "'Merah' is...", options: ["Blue", "Red", "Green", "Yellow"], correct: "Red" },
+            { question: "'Biru' is...", options: ["Red", "Blue", "Black", "White"], correct: "Blue" },
+            { question: "'Hijau' is...", options: ["Green", "Grey", "Gold", "Grape"], correct: "Green" },
+            { question: "'Kuning' is...", options: ["Yellow", "Red", "Blue", "Pink"], correct: "Yellow" },
+            { question: "'Hitam' is...", options: ["White", "Black", "Brown", "Blue"], correct: "Black" },
+            { question: "'Putih' is...", options: ["Black", "White", "Red", "Grey"], correct: "White" },
+            { question: "'Ungu' is...", options: ["Pink", "Purple", "Blue", "Red"], correct: "Purple" },
+            { question: "'Cokelat' is...", options: ["Grey", "Brown", "Black", "Red"], correct: "Brown" },
+          ],
+          "Family 👨‍👩‍👧": [
+            { question: "'Ayah' in English", options: ["Mother", "Father", "Brother", "Sister"], correct: "Father" },
+            { question: "'Ibu' in English", options: ["Father", "Mother", "Grandma", "Aunt"], correct: "Mother" },
+            { question: "'Kakak Laki-laki'", options: ["Sister", "Brother", "Uncle", "Father"], correct: "Brother" },
+            { question: "'Kakak Perempuan'", options: ["Brother", "Sister", "Aunt", "Mother"], correct: "Sister" },
+            { question: "'Kakek' in English", options: ["Grandpa", "Grandma", "Father", "Uncle"], correct: "Grandpa" },
+            { question: "'Nenek' in English", options: ["Grandpa", "Grandma", "Mother", "Aunt"], correct: "Grandma" },
+            { question: "'Paman' in English", options: ["Uncle", "Aunt", "Father", "Brother"], correct: "Uncle" },
+            { question: "'Bibi' in English", options: ["Uncle", "Aunt", "Mother", "Sister"], correct: "Aunt" },
+          ],
+          "Animals 🦁": [
+            { question: "'Kucing' in English", options: ["Dog", "Cat", "Bird", "Fish"], correct: "Cat" },
+            { question: "'Anjing' in English", options: ["Cat", "Dog", "Lion", "Tiger"], correct: "Dog" },
+            { question: "'Singa' in English", options: ["Tiger", "Lion", "Cat", "Bear"], correct: "Lion" },
+            { question: "'Burung' in English", options: ["Bird", "Fly", "Bee", "Bat"], correct: "Bird" },
+            { question: "'Ikan' in English", options: ["Fish", "Shark", "Whale", "Crab"], correct: "Fish" },
+            { question: "'Gajah' in English", options: ["Lion", "Elephant", "Tiger", "Bear"], correct: "Elephant" },
+            { question: "'Monyet' in English", options: ["Monkey", "Mouse", "Lion", "Cat"], correct: "Monkey" },
+            { question: "'Ular' in English", options: ["Snake", "Snail", "Shark", "Spider"], correct: "Snake" },
+          ],
+          "Occupations 👮": [
+            { question: "'Guru' in English", options: ["Doctor", "Teacher", "Pilot", "Chef"], correct: "Teacher" },
+            { question: "'Dokter' in English", options: ["Nurse", "Doctor", "Vet", "Police"], correct: "Doctor" },
+            { question: "'Polisi' in English", options: ["Pilot", "Police", "Soldier", "Driver"], correct: "Police" },
+            { question: "'Pilot' in English", options: ["Driver", "Pilot", "Sailor", "Chef"], correct: "Pilot" },
+            { question: "'Koki' in English", options: ["Chef", "Teacher", "Doctor", "Nurse"], correct: "Chef" },
+            { question: "'Petani' in English", options: ["Farmer", "Driver", "Pilot", "Police"], correct: "Farmer" },
+            { question: "'Sopir' in English", options: ["Driver", "Diver", "Doctor", "Dancer"], correct: "Driver" },
+            { question: "'Penyanyi' in English", options: ["Singer", "Dancer", "Artist", "Actor"], correct: "Singer" },
+          ],
+          "Places 🏫": [
+            { question: "'Sekolah' in English", options: ["School", "Home", "Park", "Shop"], correct: "School" },
+            { question: "'Rumah' in English", options: ["School", "House", "Hospital", "Bank"], correct: "House" },
+            { question: "'Pasar' in English", options: ["Market", "Park", "Zoo", "School"], correct: "Market" },
+            { question: "'Rumah Sakit'", options: ["Hotel", "Hospital", "House", "School"], correct: "Hospital" },
+            { question: "'Taman' in English", options: ["Park", "Market", "Zoo", "Bank"], correct: "Park" },
+            { question: "'Kebun Binatang'", options: ["Park", "Zoo", "Farm", "Forest"], correct: "Zoo" },
+            { question: "'Perpustakaan'", options: ["Library", "School", "Bookstore", "Bank"], correct: "Library" },
+            { question: "'Bandara'", options: ["Station", "Port", "Airport", "Stop"], correct: "Airport" },
+          ],
+          "Nature 🌳": [
+            { question: "'Matahari'", options: ["Moon", "Sun", "Star", "Sky"], correct: "Sun" },
+            { question: "'Bulan'", options: ["Sun", "Moon", "Earth", "Cloud"], correct: "Moon" },
+            { question: "'Bintang'", options: ["Sky", "Star", "Sun", "Moon"], correct: "Star" },
+            { question: "'Langit'", options: ["Sea", "Sky", "Sun", "Cloud"], correct: "Sky" },
+            { question: "'Pohon'", options: ["Tree", "Flower", "Grass", "Leaf"], correct: "Tree" },
+            { question: "'Bunga'", options: ["Tree", "Flower", "Fruit", "Root"], correct: "Flower" },
+            { question: "'Air'", options: ["Fire", "Water", "Wind", "Earth"], correct: "Water" },
+            { question: "'Api'", options: ["Water", "Fire", "Air", "Soil"], correct: "Fire" },
+          ],
+          "Common Nouns 📚": [
+            { question: "'Buku'", options: ["Pen", "Book", "Bag", "Desk"], correct: "Book" },
+            { question: "'Meja'", options: ["Chair", "Table", "Door", "Window"], correct: "Table" },
+            { question: "'Kursi'", options: ["Table", "Chair", "Bed", "Sofa"], correct: "Chair" },
+            { question: "'Tas'", options: ["Book", "Bag", "Pen", "Pencil"], correct: "Bag" },
+            { question: "'Pulpen'", options: ["Pencil", "Pen", "Eraser", "Ruler"], correct: "Pen" },
+            { question: "'Pintu'", options: ["Window", "Door", "Floor", "Wall"], correct: "Door" },
+            { question: "'Jendela'", options: ["Door", "Window", "Roof", "Floor"], correct: "Window" },
+            { question: "'Jam'", options: ["Clock", "Lock", "Sock", "Rock"], correct: "Clock" },
+          ],
+          "Math Ops ➕": [
+            { question: "One + One = ?", options: ["One", "Two", "Three", "Zero"], correct: "Two" },
+            { question: "Two + Two = ?", options: ["Three", "Four", "Five", "Six"], correct: "Four" },
+            { question: "Five - Two = ?", options: ["Two", "Three", "Four", "One"], correct: "Three" },
+            { question: "Ten - Five = ?", options: ["Four", "Five", "Six", "Seven"], correct: "Five" },
+            { question: "3 + 3 = ?", options: ["Five", "Six", "Seven", "Eight"], correct: "Six" },
+            { question: "10 + 10 = ?", options: ["Ten", "Twenty", "Thirty", "Zero"], correct: "Twenty" },
+            { question: "Seven - One = ?", options: ["Five", "Six", "Seven", "Eight"], correct: "Six" },
+            { question: "Four + One = ?", options: ["Five", "Four", "Six", "Three"], correct: "Five" },
+          ],
+          "Other / Mixed 🔀": [
+            { question: "Opposite of 'Big'", options: ["Small", "Large", "Huge", "Tall"], correct: "Small" },
+            { question: "Opposite of 'Hot'", options: ["Cold", "Warm", "Cool", "Dry"], correct: "Cold" },
+            { question: "She ___ happy", options: ["is", "am", "are", "be"], correct: "is" },
+            { question: "Past tense 'Go'", options: ["Went", "Gone", "Goes", "Going"], correct: "Went" },
+            { question: "Verb 'Makan'", options: ["Eat", "Drink", "Sleep", "Run"], correct: "Eat" },
+            { question: "Verb 'Tidur'", options: ["Run", "Sleep", "Walk", "Talk"], correct: "Sleep" },
+            { question: "Day after Sunday", options: ["Monday", "Tuesday", "Friday", "Saturday"], correct: "Monday" },
+            { question: "Month after June", options: ["May", "July", "August", "April"], correct: "July" },
+          ]
+        };
+
+        // --- COMPONENTS ---
+        const DinoLeft = ({ isPulling }) => (
+          <div className={`relative transition-transform duration-200 ${isPulling ? '-translate-x-4 rotate-[-10deg] scale-110' : ''}`}>
+            <img src="https://i.imgur.com/wNVwFKJ.png" alt="Dino Aga" className="w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-xl" />
+            <div className="absolute -bottom-6 w-full text-center font-bold text-green-800 bg-green-200/80 rounded px-1 text-[10px]">TIM A</div>
+          </div>
+        );
+
+        const DinoRight = ({ isPulling }) => (
+          <div className={`relative transition-transform duration-200 ${isPulling ? 'translate-x-4 rotate-[10deg] scale-110' : ''}`}>
+            <img src="https://i.imgur.com/UilWyZd.png" alt="Dino Bona" className="w-20 h-20 md:w-28 md:h-28 object-contain drop-shadow-xl" />
+            <div className="absolute -bottom-6 w-full text-center font-bold text-red-800 bg-red-200/80 rounded px-1 text-[10px]">TIM B</div>
+          </div>
+        );
+
+        // --- MAIN GAME ---
+        function DinoTugOfWar() {
+          const [gameState, setGameState] = useState('splash'); // Start with 'splash'
+          const [ropePosition, setRopePosition] = useState(50); // 0 (Menang A) - 100 (Menang B)
+          const [selectedCategory, setSelectedCategory] = useState(null);
+          const [isFullscreen, setIsFullscreen] = useState(false);
+          const [toastMessage, setToastMessage] = useState(null); // State untuk pesan error
+          
+          // State Player A
+          const [deckA, setDeckA] = useState([]);
+          const [indexA, setIndexA] = useState(0);
+          const [feedbackA, setFeedbackA] = useState(null);
+          const [freezeA, setFreezeA] = useState(false);
+
+          // State Player B
+          const [deckB, setDeckB] = useState([]);
+          const [indexB, setIndexB] = useState(0);
+          const [feedbackB, setFeedbackB] = useState(null);
+          const [freezeB, setFreezeB] = useState(false);
+
+          // Game Constants
+          const WIN_LIMIT_A = 15; 
+          const WIN_LIMIT_B = 85; 
+          const PULL_POWER = 5;
+
+          // Splash Screen Effect (Diperpanjang jadi 6 detik)
+          useEffect(() => {
+              if (gameState === 'splash') {
+                  const timer = setTimeout(() => {
+                      setGameState('title');
+                  }, 6000); // 6 detik
+                  return () => clearTimeout(timer);
+              }
+          }, [gameState]);
+
+          // Effect untuk suara menang (Updated Source)
+          useEffect(() => {
+              if (gameState === 'wonA' || gameState === 'wonB') {
+                  const winAudio = new Audio('https://github.com/ilindekguru/Lagulagu/raw/refs/heads/main/brass-fanfare-with-timpani-and-winchimes-reverberated-146260.mp3');
+                  winAudio.volume = 1.0; 
+                  winAudio.play().catch(err => console.log("Audio play failed:", err));
+              }
+          }, [gameState]);
+
+          // Function to toggle fullscreen with Vendor Prefixes
+          const toggleFullscreen = () => {
+            const elem = document.documentElement;
+            const isFS = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+
+            if (!isFS) {
+              if (elem.requestFullscreen) {
+                elem.requestFullscreen().then(() => setIsFullscreen(true)).catch(handleFsError);
+              } else if (elem.webkitRequestFullscreen) { /* Safari */
+                elem.webkitRequestFullscreen();
+                setIsFullscreen(true);
+              } else if (elem.msRequestFullscreen) { /* IE11 */
+                elem.msRequestFullscreen();
+                setIsFullscreen(true);
+              }
+            } else {
+              if (document.exitFullscreen) {
+                document.exitFullscreen().then(() => setIsFullscreen(false)).catch((err) => console.log(err));
+              } else if (document.webkitExitFullscreen) { /* Safari */
+                document.webkitExitFullscreen();
+                setIsFullscreen(false);
+              } else if (document.msExitFullscreen) { /* IE11 */
+                document.msExitFullscreen();
+                setIsFullscreen(false);
+              }
+            }
+          };
+
+          const handleFsError = (err) => {
+            console.warn(`Fullscreen error: ${err.message}`);
+            setToastMessage("Layar penuh tidak diizinkan di mode Preview ini.");
+            setTimeout(() => setToastMessage(null), 4000);
+          };
+
+          useEffect(() => {
+            const handleFullscreenChange = () => {
+              const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+              setIsFullscreen(isFS);
+            };
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.addEventListener('msfullscreenchange', handleFullscreenChange);
+            return () => {
+              document.removeEventListener('fullscreenchange', handleFullscreenChange);
+              document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+              document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+            };
+          }, []);
+
+          const startGame = (category) => {
+            setSelectedCategory(category);
+            const questions = questionBank[category];
+            const shuffledA = [...questions].sort(() => 0.5 - Math.random());
+            const shuffledB = [...questions].sort(() => 0.5 - Math.random());
+            setDeckA(shuffledA);
+            setDeckB(shuffledB);
+            setIndexA(0);
+            setIndexB(0);
+            setRopePosition(50);
+            setFeedbackA(null);
+            setFeedbackB(null);
+            setFreezeA(false);
+            setFreezeB(false);
+            setGameState('playing');
+          };
+
+          const handleAnswer = (player, selectedOption) => {
+            if (gameState !== 'playing') return;
+            
+            if (player === 'A') {
+              if (freezeA) return;
+              const currentQ = deckA[indexA];
+              if (selectedOption === currentQ.correct) {
+                setFeedbackA('correct');
+                setRopePosition(prev => {
+                    const next = prev - PULL_POWER;
+                    checkWin(next);
+                    return next;
+                });
+                setTimeout(() => {
+                    setFeedbackA(null);
+                    setIndexA(prev => (prev + 1) % deckA.length);
+                }, 300);
+              } else {
+                setFeedbackA('wrong');
+                setFreezeA(true);
+                setTimeout(() => { setFeedbackA(null); setFreezeA(false); }, 1000);
+              }
+            }
+
+            if (player === 'B') {
+              if (freezeB) return;
+              const currentQ = deckB[indexB];
+              if (selectedOption === currentQ.correct) {
+                setFeedbackB('correct');
+                setRopePosition(prev => {
+                    const next = prev + PULL_POWER;
+                    checkWin(next);
+                    return next;
+                });
+                setTimeout(() => {
+                    setFeedbackB(null);
+                    setIndexB(prev => (prev + 1) % deckB.length);
+                }, 300);
+              } else {
+                setFeedbackB('wrong');
+                setFreezeB(true);
+                setTimeout(() => { setFeedbackB(null); setFreezeB(false); }, 1000);
+              }
+            }
+          };
+
+          const checkWin = (pos) => {
+            if (pos <= WIN_LIMIT_A) setGameState('wonA');
+            else if (pos >= WIN_LIMIT_B) setGameState('wonB');
+          };
+
+          // Logic apakah UI Game ditampilkan
+          const showGameUI = ['menu', 'playing', 'wonA', 'wonB'].includes(gameState);
+
+          return (
+            <div className="h-screen w-full bg-sky-100 flex flex-col overflow-hidden relative font-sans touch-none select-none">
+              
+              {toastMessage && (
+                <div className="absolute top-16 right-2 z-[60] animate-bounce">
+                    <div className="bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-xs font-bold">
+                        <AlertCircle size={16} />
+                        {toastMessage}
+                    </div>
+                </div>
+              )}
+
+              <div className="absolute top-2 right-2 z-50">
+                  <button 
+                      onClick={toggleFullscreen}
+                      className="bg-white/80 p-2 rounded-full shadow hover:bg-white text-sky-700 transition-all"
+                      title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                  >
+                      {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+                  </button>
+              </div>
+
+              {/* --- SPLASH SCREEN (INTRO) --- */}
+              {gameState === 'splash' && (
+                  <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-6 text-center">
+                      <div className="animate-zoom-in">
+                          <h2 className="text-xl md:text-3xl text-gray-500 font-bold mb-4 tracking-widest uppercase">Created by</h2>
+                          <h1 className="text-2xl md:text-5xl text-sky-600 font-black mb-2 leading-tight whitespace-nowrap">Ilining Uswatuun Khasanah</h1>
+                          <div className="w-32 h-2 bg-yellow-400 my-6 rounded-full mx-auto"></div>
+                          <p className="text-lg md:text-2xl text-gray-600 font-bold">Duta Teknologi Jawa Tengah 2024</p>
+                      </div>
+                  </div>
+              )}
+
+              {/* --- TITLE SCREEN (JUDUL GAME) --- */}
+              {gameState === 'title' && (
+                  <div className="absolute inset-0 z-[90] flex flex-col items-center justify-end pb-24 p-4 overflow-hidden bg-sky-100 animate-fade-in">
+                      {/* Background Image Layer */}
+                      <div className="absolute inset-0 z-0">
+                          <img 
+                              src="https://i.imgur.com/JeJbnl9.png" 
+                              alt="Background" 
+                              className="w-full h-full object-cover"
+                          />
+                      </div>
+
+                      {/* Content - Button Only (Clean) */}
+                      <div className="relative z-10 w-full max-w-md text-center flex flex-col items-center">
+                          <button 
+                              onClick={() => setGameState('menu')}
+                              className="w-full max-w-xs bg-green-500 hover:bg-green-600 text-white font-black text-3xl py-4 rounded-full shadow-[0_6px_0_rgb(21,128,61)] active:shadow-none active:translate-y-2 transition-all flex items-center justify-center gap-3 border-4 border-white ring-4 ring-green-200/50"
+                          >
+                              <Play size={32} fill="currentColor" /> MASUK
+                          </button>
+                      </div>
+                  </div>
+              )}
+
+              {/* --- GAME UI WRAPPER (Hanya tampil saat tidak splash/title) --- */}
+              {showGameUI && (
+                <>
+                  {/* --- BAGIAN ATAS: SOAL --- */}
+                  <div className="h-[15%] flex w-full p-1 gap-1 z-20">
+                    <div className={`flex-1 rounded-lg border-2 border-green-500 bg-white flex flex-col items-center justify-center p-1 shadow-lg transition-colors ${freezeA ? 'bg-gray-200' : ''}`}>
+                       {gameState === 'playing' && deckA.length > 0 ? (
+                         <>
+                           <span className="text-green-600 font-black text-[10px] uppercase leading-none mb-0.5">TIM A</span>
+                           <h2 className="text-green-900 font-bold text-sm md:text-lg text-center leading-tight line-clamp-2">{deckA[indexA].question}</h2>
+                           {freezeA && <span className="text-red-500 font-bold text-[10px] animate-pulse">SALAH!</span>}
+                         </>
+                       ) : <div className="text-gray-300 font-bold text-xl">A</div>}
+                    </div>
+
+                    <div className="flex flex-col justify-center items-center px-1 min-w-[50px]">
+                        <span className="text-xl font-black text-sky-900 italic">VS</span>
+                        {gameState === 'playing' && (
+                            <button onClick={() => setGameState('menu')} className="mt-1 p-1 bg-gray-200 rounded-full hover:bg-gray-300">
+                                <Home size={14} className="text-gray-600" />
+                            </button>
+                        )}
+                    </div>
+
+                    <div className={`flex-1 rounded-lg border-2 border-red-500 bg-white flex flex-col items-center justify-center p-1 shadow-lg transition-colors ${freezeB ? 'bg-gray-200' : ''}`}>
+                       {gameState === 'playing' && deckB.length > 0 ? (
+                         <>
+                           <span className="text-red-600 font-black text-[10px] uppercase leading-none mb-0.5">TIM B</span>
+                           <h2 className="text-red-900 font-bold text-sm md:text-lg text-center leading-tight line-clamp-2">{deckB[indexB].question}</h2>
+                           {freezeB && <span className="text-red-500 font-bold text-[10px] animate-pulse">SALAH!</span>}
+                         </>
+                       ) : <div className="text-gray-300 font-bold text-xl">B</div>}
+                    </div>
+                  </div>
+
+                  {/* --- BAGIAN TENGAH: ARENA VISUAL --- */}
+                  <div className="h-[60%] relative w-full overflow-hidden border-y-2 border-white/50">
+                    <img 
+                        src="https://i.imgur.com/hu8aBFB.png" 
+                        alt="Arena Background" 
+                        className="absolute inset-0 w-full h-full object-cover z-0"
+                    />
+                    
+                    {/* Markers (above bg) */}
+                    <div className="absolute top-0 left-[15%] h-full border-l-2 border-dashed border-white/50 opacity-70 flex items-start pl-1 pt-2 z-0"><span className="text-[10px] font-bold text-white shadow-black drop-shadow-md">WIN A</span></div>
+                    <div className="absolute top-0 right-[15%] h-full border-r-2 border-dashed border-white/50 opacity-70 flex items-start justify-end pr-1 pt-2 z-0"><span className="text-[10px] font-bold text-white shadow-black drop-shadow-md">WIN B</span></div>
+
+                    <div 
+                        className="absolute top-0 left-0 w-full h-full transition-transform duration-300 ease-out z-10"
+                        style={{ transform: `translateX(${(ropePosition - 50) * 0.4}%)` }}
+                    >
+                        <div className="w-full h-full relative flex items-center justify-center">
+                            <div className="absolute w-[120%] h-3 bg-amber-800 rounded top-[65%] shadow-md"></div>
+                            <div className="absolute w-6 h-6 bg-yellow-400 rounded-full border-2 border-white top-[65%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 shadow-sm"></div>
+                            
+                            <div className="absolute left-[20%] top-[45%] z-10">
+                               <DinoLeft isPulling={feedbackA === 'correct'} />
+                               {feedbackA === 'correct' && <div className="absolute -top-5 left-0 font-bold text-green-600 animate-bounce text-xs">TARIK!</div>}
+                            </div>
+
+                            <div className="absolute right-[20%] top-[45%] z-10">
+                               <DinoRight isPulling={feedbackB === 'correct'} />
+                               {feedbackB === 'correct' && <div className="absolute -top-5 right-0 font-bold text-red-600 animate-bounce text-xs">TARIK!</div>}
+                            </div>
+                        </div>
+                    </div>
+                  </div>
+
+                  {/* --- BAGIAN BAWAH: TOMBOL JAWAB --- */}
+                  <div className="h-[25%] w-full flex bg-gray-50 pb-safe">
+                    <div className={`flex-1 p-1 border-r border-gray-300 transition-colors ${freezeA ? 'bg-gray-200' : 'bg-green-50'}`}>
+                        {gameState === 'playing' && (
+                            <div className="grid grid-cols-2 gap-1 h-full">
+                                {deckA[indexA]?.options.map((opt, i) => (
+                                    <button
+                                        key={i}
+                                        onPointerDown={(e) => { e.preventDefault(); handleAnswer('A', opt); }}
+                                        disabled={freezeA}
+                                        className="bg-white border-b-2 border-green-300 rounded-lg text-green-800 font-bold text-xs md:text-base shadow active:border-b-0 active:translate-y-0.5 touch-manipulation flex items-center justify-center hover:bg-green-100 leading-none px-1"
+                                    >
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className={`flex-1 p-1 border-l border-gray-300 transition-colors ${freezeB ? 'bg-gray-200' : 'bg-red-50'}`}>
+                         {gameState === 'playing' && (
+                            <div className="grid grid-cols-2 gap-1 h-full">
+                                {deckB[indexB]?.options.map((opt, i) => (
+                                    <button
+                                        key={i}
+                                        onPointerDown={(e) => { e.preventDefault(); handleAnswer('B', opt); }}
+                                        disabled={freezeB}
+                                        className="bg-white border-b-2 border-red-300 rounded-lg text-red-800 font-bold text-xs md:text-base shadow active:border-b-0 active:translate-y-0.5 touch-manipulation flex items-center justify-center hover:bg-red-100 leading-none px-1"
+                                    >
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* --- MENU & WIN OVERLAYS --- */}
+              {(gameState === 'menu' || gameState.startsWith('won')) && (
+                  <div className="absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+                      <div className="bg-white rounded-2xl p-4 w-full max-w-2xl h-auto max-h-[90vh] flex flex-col text-center shadow-2xl border-4 border-sky-500 animate-slide-up">
+                          
+                          {gameState === 'menu' ? (
+                              <>
+                                <div className="flex items-center justify-center gap-2 mb-2">
+                                    <Trophy size={32} className="text-yellow-500" />
+                                    <h1 className="text-2xl font-black text-slate-800">DINO ENGLISH</h1>
+                                </div>
+                                <p className="text-slate-500 mb-4 text-xs font-bold">PILIH TOPIK UNTUK MULAI BERMAIN:</p>
+                                
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 overflow-y-auto pr-1 flex-1 min-h-0">
+                                    {Object.keys(questionBank).map((cat, idx) => (
+                                        <button 
+                                            key={idx}
+                                            onClick={() => startGame(cat)}
+                                            className="bg-blue-50 border-b-4 border-blue-200 text-blue-800 py-3 rounded-xl font-bold text-sm shadow active:border-b-0 active:translate-y-1 hover:bg-blue-100 transition-all flex flex-col items-center justify-center gap-1"
+                                        >
+                                            <span>{cat}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                              </>
+                          ) : (
+                              <>
+                                <h1 className={`text-3xl font-black mb-2 ${gameState === 'wonA' ? 'text-green-600' : 'text-red-600'}`}>
+                                    {gameState === 'wonA' ? 'TIM A MENANG!' : 'TIM B MENANG!'}
+                                </h1>
+                                <div className="flex justify-center my-4">
+                                    <img 
+                                        src={gameState === 'wonA' ? "https://i.imgur.com/wNVwFKJ.png" : "https://i.imgur.com/UilWyZd.png"} 
+                                        className="w-24 h-24 object-contain animate-bounce"
+                                        alt="Winner"
+                                    />
+                                </div>
+                                <div className="flex gap-2 mt-auto">
+                                    <button onClick={() => startGame(selectedCategory)} className="flex-1 py-3 rounded-xl bg-gray-800 text-white font-bold shadow-lg active:scale-95 flex justify-center items-center gap-2 text-sm">
+                                       <RotateCcw size={16} /> MAIN LAGI
+                                    </button>
+                                    <button onClick={() => setGameState('menu')} className="flex-1 py-3 rounded-xl bg-sky-500 text-white font-bold shadow-lg active:scale-95 flex justify-center items-center gap-2 text-sm">
+                                       <Grid size={16} /> MENU
+                                    </button>
+                                </div>
+                              </>
+                          )}
+                      </div>
+                  </div>
+              )}
+
+            </div>
+          );
+        }
+
+        // --- RENDER ---
+        ReactDOM.createRoot(document.getElementById('root')).render(<DinoTugOfWar />);
+    </script>
+</body>
+</html>
